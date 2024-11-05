@@ -1,6 +1,9 @@
 # Overview
 This is a scenery generation tool built for Roblox. I began working on this project because of my interest in flight simulation.
 
+![image](https://github.com/user-attachments/assets/7e8ed3dc-dbe4-4652-b6e6-db557a447292)
+
+
 There are a few options for massive 1:1 scale scenery on Roblox:
 - Stream, decode, and render satellite images and heightmaps natively in Roblox, using either Parts or EditableMesh/EditableImage. This can be done, but is slow and more technically complicated. The main bottleneck is that Roblox doesn't provide a good way to download and decode PNG/JPEG files and access individual pixel values, and Lua isn't the fastest language for the job.
 - Request image/heightmap data and render it, without decoding. This requires you to decode and serve map tiles on your own server. It can be faster than the previous option, but EditableMesh and EditableImage now become an issue. First, EditableMeshes are limited to 2048 studs in size, which is not ideal for massively large worlds. Second, there's no fast way to create and update meshes/images in bulk.
