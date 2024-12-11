@@ -26,8 +26,6 @@ def UploadTileMesh(x, y, z):
         display_name=f"TILE_{x}_{y}_{z}",
     )
 
-    print(op_id)
-
     return op_id
 
 
