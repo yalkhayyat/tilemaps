@@ -5,9 +5,9 @@ import logging
 from img_utils import *
 from tile_quadtree import *
 from config import *
-from asset_handler import AssetHandler
+from asset_handler import AssetHandler, TileReprocessingError
 from img_handler import UploadTileImg
-from mesh_handler import UploadTileMesh
+from mesh_handler import UploadTileMesh, UploadFlatTileMesh
 import argparse
 
 
@@ -33,13 +33,19 @@ def main(args):
     )
 
     if args.asset == "all":
-        recurseProcessTile(quadtree.root, img)
-        img.RetrieveAllAssetIds()
-        img.ReProcessMissedTiles()
+        try:
+            recurseProcessTile(quadtree.root, img)
+            img.RetrieveAllAssetIds()
+            img.ReProcessMissedTiles()
+        except TileReprocessingError as e:
+            print(e)
 
-        recurseProcessTile(quadtree.root, mesh)
-        mesh.RetrieveAllAssetIds()
-        mesh.ReProcessMissedTiles()
+        try:
+            recurseProcessTile(quadtree.root, mesh)
+            mesh.RetrieveAllAssetIds()
+            mesh.ReProcessMissedTiles()
+        except TileReprocessingError as e:
+            print(e)
 
 
 if __name__ == "__main__":

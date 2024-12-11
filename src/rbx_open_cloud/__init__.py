@@ -65,7 +65,7 @@ class OpenCloudClient:
                 response.status_code == V1ErrorCodes.RESOURCE_EXHAUSTED
                 or response.status_code == 0
             ):
-                logging.warn(
+                logging.warning(
                     "Exhausted Rate Limit for Create Asset. Trying again in 60 seconds"
                 )
                 # Avoid hitting the rate limit if exhausted, or wait extra time if no response recieved
@@ -98,12 +98,15 @@ class OpenCloudClient:
                 response.status_code == V1ErrorCodes.RESOURCE_EXHAUSTED
                 or response.status_code == 0
             ):
-                logging.warn(
+                logging.warning(
                     "Exhausted Rate Limit for Get Operation. Trying again in 60 seconds."
                 )
                 # Avoid hitting the rate limit if exhausted, or wait extra time if no response recieved
                 time.sleep(60)
                 # Try one more time
                 i -= 1
+
+            # extra timeout between retries
+            time.sleep(i)
 
         raise OperationFailedException(operationId, response.text)
