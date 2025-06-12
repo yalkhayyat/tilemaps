@@ -7,9 +7,9 @@ from PIL import Image
 import numpy as np
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
-import json
 import math
 import mercantile
+from sqlite import SaveTileToSQLite, TableType
 
 bpy.app.binary_path = BLENDER_PATH
 
@@ -44,21 +44,6 @@ def UploadFlatTileMesh(x, y, z):
     print(op_id)
 
     return op_id
-
-
-def SaveTileToJSON(x, y, z, value, output_file):
-    try:
-        with open(output_file, "r") as f:
-            keys = json.load(f)
-    except FileNotFoundError:
-        keys = {}
-    except json.JSONDecodeError:
-        keys = {}
-
-    keys[f"{x}_{y}_{z}"] = value
-
-    with open(output_file, "w") as f:
-        json.dump(keys, f, indent=4)
 
 
 # Function to convert Mercator x, y to spherical coordinates
@@ -135,12 +120,13 @@ def GetHeightmappedMesh(x, y, z, heightmap_path, output_path, spherical):
 
     bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
 
-    SaveTileToJSON(
+    SaveTileToSQLite(
         x,
         y,
         z,
         f"{tile.location.x}_{tile.location.y}_{tile.location.z}",
-        MESH_VERT_OFFSET_PATH,
+        UNIFIED_DB_PATH,
+        TableType.MESH_VERT_OFFSETS,
     )
 
     bpy.ops.export_scene.fbx(filepath=output_path)

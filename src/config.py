@@ -21,21 +21,22 @@ SAVED_IMG_PATH = os.path.join("output", ID, "img.jpg")
 SAVED_HEIGHTMAP_PATH = os.path.join("output", ID, "img.png")
 SAVED_MESH_PATH = os.path.join("output", ID, "mesh.fbx")
 
-IMG_ASSET_ID_PATH = os.path.join("output", ID, "img_asset_ids.json")
-MESH_ASSET_ID_PATH = os.path.join("output", ID, "mesh_asset_ids.json")
+# Unified database path
+UNIFIED_DB_PATH = os.path.join("output", ID, "tiles.db")
 
-IMG_OPERATIONS_PATH = os.path.join("output", ID, "img_operations.json")
-MESH_OPERATIONS_PATH = os.path.join("output", ID, "mesh_operations.json")
-
-MISSED_IMG_PATH = os.path.join("output", ID, "missed_img.json")
-MISSED_MESH_PATH = os.path.join("output", ID, "missed_mesh.json")
+# Legacy paths for backward compatibility (now using single database)
+IMG_ASSET_ID_PATH = UNIFIED_DB_PATH
+MESH_ASSET_ID_PATH = UNIFIED_DB_PATH
+IMG_OPERATIONS_PATH = UNIFIED_DB_PATH
+MESH_OPERATIONS_PATH = UNIFIED_DB_PATH
+MISSED_IMG_PATH = UNIFIED_DB_PATH
+MISSED_MESH_PATH = UNIFIED_DB_PATH
+MESH_VERT_OFFSET_PATH = UNIFIED_DB_PATH
 
 LOGS_PATH = os.path.join("output", ID, "logs.txt")
 
 BLENDER_PATH = "C:\Program Files\Blender Foundation\Blender 4.0\blender.exe"
 BLENDER_TILE_PATH = os.path.join("assets", "mesh_tile.blend")
-
-MESH_VERT_OFFSET_PATH = os.path.join("output", ID, "mesh_offsets.json")
 
 TILE_VERTEX_LENGTH = 32
 
@@ -64,9 +65,18 @@ logger.addHandler(fh)
 
 # Map Generation Settings
 
-QUADTREE_ROOT = Tile(332, 459, 10)
-QUADTREE_MAX_LOD = 10
-QUADTREE_LOD_THRESHOLD = 10
+QUADTREE_ROOT = Tile(0, 0, 0)
+QUADTREE_MAX_LOD = 2
+QUADTREE_LOD_THRESHOLD = 11
 QUADTREE_AIRPORTS = [
-    "TNCM",
+    "KATL",  # Atlanta
+    "KLAX",  # Los Angeles
+    "KORD",  # Chicago
+    "KDFW",  # Dallas Fort Worth
+    "KDEN",  # Denver
+    "KJFK",  # John F. Kennedy (New York City)
+    "KSFO",  # San Francisco
+    "KSEA",  # Seattle-Tacoma
+    "KLAS",  # Harry Reid (Las Vegas)
+    "KMIA",  # Miami
 ]

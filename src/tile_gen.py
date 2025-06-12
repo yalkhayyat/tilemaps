@@ -1,6 +1,5 @@
 from rbx_open_cloud import *
 from mapbox import *
-import json
 import logging
 from img_utils import *
 from tile_quadtree import *
@@ -8,6 +7,7 @@ from config import *
 from asset_handler import AssetHandler, TileReprocessingError
 from img_handler import UploadTileImg
 from mesh_handler import UploadTileMesh, UploadFlatTileMesh
+from sqlite import TableType
 import argparse
 
 
@@ -26,10 +26,18 @@ def main(args):
     quadtree.BuildTree()
 
     img = AssetHandler(
-        IMG_ASSET_ID_PATH, IMG_OPERATIONS_PATH, MISSED_IMG_PATH, UploadTileImg
+        UNIFIED_DB_PATH,
+        TableType.IMG_ASSET_IDS,
+        TableType.IMG_OPERATIONS,
+        TableType.MISSED_IMG,
+        UploadTileImg,
     )
     mesh = AssetHandler(
-        MESH_ASSET_ID_PATH, MESH_OPERATIONS_PATH, MISSED_MESH_PATH, UploadTileMesh
+        UNIFIED_DB_PATH,
+        TableType.MESH_ASSET_IDS,
+        TableType.MESH_OPERATIONS,
+        TableType.MISSED_MESH,
+        UploadTileMesh,
     )
 
     if args.asset == "all":
