@@ -144,10 +144,3 @@ def GetHeightmappedMesh(x, y, z, heightmap_path, output_path, spherical):
     )
 
     bpy.ops.export_scene.fbx(filepath=output_path)
-
-
-if __name__ == "__main__":
-    # UploadTileMesh(536, 358, 10)
-    # UploadTileMesh(535, 358, 10)
-    UploadTileMesh(19, 46, 7)
-    # UploadTileMesh(38, 91, 8)

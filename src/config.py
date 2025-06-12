@@ -2,7 +2,6 @@ import dotenv, os, logging, random
 from logging_format import TerminalFormatter, FileFormatter
 from rbx_open_cloud import OpenCloudClient
 from mapbox import MapboxClient
-from sentinel import CopernicusTileClient
 import airportsdata
 from datetime import datetime
 from tile_quadtree import Tile
@@ -44,7 +43,6 @@ os.makedirs(f"output/{ID}")
 
 ROBLOX = OpenCloudClient(ROBLOX_API_KEY, ROBLOX_USER_ID, 15)
 MAPBOX = MapboxClient(MAPBOX_API_KEY, 15)
-SENTINEL = CopernicusTileClient("xoskeleten611@gmail.com", "Yousif$1282005", 15)
 AIRPORTS = airportsdata.load()
 
 
@@ -67,8 +65,8 @@ logger.addHandler(fh)
 # Map Generation Settings
 
 QUADTREE_ROOT = Tile(332, 459, 10)
-QUADTREE_MAX_LOD = 15
-QUADTREE_LOD_THRESHOLD = 15
+QUADTREE_MAX_LOD = 10
+QUADTREE_LOD_THRESHOLD = 10
 QUADTREE_AIRPORTS = [
     "TNCM",
 ]
