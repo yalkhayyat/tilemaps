@@ -58,3 +58,4 @@ class V1ErrorCodes(IntEnum):
 class OpenCloudAPI(StrEnum):
     ASSETS = "https://apis.roblox.com/assets/v1/assets"
     OPERATIONS = "https://apis.roblox.com/assets/v1/operations"
+    DATASTORES_BASE = "https://apis.roblox.com/datastores/v1/universes"
