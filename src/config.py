@@ -1,5 +1,6 @@
 import dotenv, os, logging, random
 from logging_format import TerminalFormatter, FileFormatter
+from logging.handlers import RotatingFileHandler 
 from rbx_open_cloud import OpenCloudClient
 from mapbox import MapboxClient
 import airportsdata
@@ -56,7 +57,12 @@ stream = logging.StreamHandler()
 stream.setLevel(logging.INFO)
 stream.setFormatter(TerminalFormatter())
 
-fh = logging.FileHandler(LOGS_PATH)
+# Old FileHandler:
+# fh = logging.FileHandler(LOGS_PATH) 
+
+# New RotatingFileHandler:
+# This will create log files up to 5MB, and keep the 4 last old files (20MB total).
+fh = RotatingFileHandler(LOGS_PATH, maxBytes=5*1024*1024, backupCount=100)
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(FileFormatter())
 
@@ -66,7 +72,7 @@ logger.addHandler(fh)
 # Map Generation Settings
 
 QUADTREE_ROOT = Tile(0, 0, 0)
-QUADTREE_MAX_LOD = 2
+QUADTREE_MAX_LOD = 12
 QUADTREE_LOD_THRESHOLD = 11
 QUADTREE_AIRPORTS = [
     "KATL",  # Atlanta

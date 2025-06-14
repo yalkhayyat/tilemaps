@@ -36,7 +36,7 @@ class MapboxClient:
         )
 
         for i in range(self.max_retries):
-            response = requests.get(url)
+            response = requests.get(url, timeout=60)
 
             if response.status_code // 100 == 2:
                 # Save the map tile to file

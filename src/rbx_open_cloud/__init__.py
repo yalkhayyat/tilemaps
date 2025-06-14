@@ -57,6 +57,7 @@ class OpenCloudClient:
                 headers=headers,
                 data=data,
                 files=files,
+                timeout=60
             )
 
             if response.ok:
@@ -84,6 +85,7 @@ class OpenCloudClient:
             response = requests.get(
                 OpenCloudAPI.OPERATIONS + f"/{operationId}",
                 headers=headers,
+                timeout=60
             )
 
             if response.ok:
