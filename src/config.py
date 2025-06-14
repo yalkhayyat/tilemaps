@@ -35,7 +35,7 @@ MESH_VERT_OFFSET_PATH = UNIFIED_DB_PATH
 
 LOGS_PATH = os.path.join("output", ID, "logs.txt")
 
-BLENDER_PATH = "C:\Program Files\Blender Foundation\Blender 4.0\blender.exe"
+BLENDER_PATH = "blender"
 BLENDER_TILE_PATH = os.path.join("assets", "mesh_tile.blend")
 
 TILE_VERTEX_LENGTH = 32
