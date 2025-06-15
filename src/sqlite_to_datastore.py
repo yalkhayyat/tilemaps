@@ -68,9 +68,9 @@ def get_table_info(db_path: str) -> Dict[str, int]:
     return table_info
 
 
-def create_tile_key(x: int, y: int, z: int) -> str:
-    """Create a standardized key for tile coordinates."""
-    return f"tile_{x}_{y}_{z}"
+def create_chunk_key(chunk_id: int) -> str:
+    """Create a standardized key for tile chunks."""
+    return f"chunk_{chunk_id}"
 
 
 def create_datastore_name(table_name: str, prefix: str = "", suffix: str = "") -> str:
@@ -80,72 +80,172 @@ def create_datastore_name(table_name: str, prefix: str = "", suffix: str = "") -
     return f"{prefix}{clean_name}{suffix}"
 
 
-def batch_upload_tiles(
+def calculate_json_size(data: dict) -> int:
+    """Calculate the size of data when encoded as JSON."""
+    return len(json.dumps(data, separators=(",", ":")))
+
+
+def create_tile_chunks(
+    tiles: List[Tuple[int, int, int, str]],
+    table_name: str,
+    max_chunk_size: int = 4_000_000,
+) -> List[dict]:
+    """
+    Group tiles into chunks that fit within datastore size limits.
+    Tiles are formatted as "x_y_z": "assetid..." key-value pairs.
+
+    Args:
+        tiles: List of (x, y, z, value) tuples
+        table_name: Name of the source table
+        max_chunk_size: Maximum size in characters for each chunk (default: 4MB - buffer)
+
+    Returns:
+        List of chunk dictionaries ready for upload
+    """
+    chunks = []
+    current_chunk_tiles = {}
+    current_chunk_size = 0
+    chunk_id = 0
+
+    # Base chunk structure overhead
+    base_chunk = {
+        "tiles": {},
+        "chunk_info": {
+            "chunk_id": 0,
+            "tile_count": 0,
+            "table": table_name,
+            "uploaded_at": str(int(time.time())),
+        },
+    }
+    base_size = calculate_json_size(base_chunk)
+
+    logging.info(f"Base chunk overhead: {base_size} characters")
+
+    for x, y, z, value in tiles:
+        # Create tile key in "x_y_z" format
+        tile_key = f"{x}_{y}_{z}"
+
+        # Calculate size of this key-value pair
+        # Format: "key":"value",
+        tile_entry_size = (
+            len(json.dumps({tile_key: value}, separators=(",", ":"))) - 2
+        )  # subtract {} brackets
+
+        # Check if adding this tile would exceed the limit
+        projected_size = current_chunk_size + tile_entry_size + base_size
+        if current_chunk_tiles and projected_size > max_chunk_size:
+            # Finalize current chunk
+            chunk_data = {
+                "tiles": current_chunk_tiles,
+                "chunk_info": {
+                    "chunk_id": chunk_id,
+                    "tile_count": len(current_chunk_tiles),
+                    "table": table_name,
+                    "uploaded_at": str(int(time.time())),
+                },
+            }
+            chunks.append(chunk_data)
+
+            logging.debug(
+                f"Created chunk {chunk_id} with {len(current_chunk_tiles)} tiles ({current_chunk_size + base_size} characters)"
+            )
+
+            # Start new chunk
+            chunk_id += 1
+            current_chunk_tiles = {}
+            current_chunk_size = 0
+
+        # Add tile to current chunk as key-value pair
+        current_chunk_tiles[tile_key] = value
+        current_chunk_size += tile_entry_size
+
+    # Don't forget the last chunk
+    if current_chunk_tiles:
+        chunk_data = {
+            "tiles": current_chunk_tiles,
+            "chunk_info": {
+                "chunk_id": chunk_id,
+                "tile_count": len(current_chunk_tiles),
+                "table": table_name,
+                "uploaded_at": str(int(time.time())),
+            },
+        }
+        chunks.append(chunk_data)
+
+        logging.debug(
+            f"Created final chunk {chunk_id} with {len(current_chunk_tiles)} tiles ({current_chunk_size + base_size} characters)"
+        )
+
+    return chunks
+
+
+def batch_upload_chunks(
     client: OpenCloudClient,
     datastore_name: str,
     table_name: str,
-    tiles: List[Tuple[int, int, int, str]],
-    batch_size: int = 100,
+    chunks: List[dict],
+    delay_between_chunks: float = 1.0,
 ) -> None:
-    """Upload tiles to datastore in batches with error handling."""
-    total_tiles = len(tiles)
-    successful_uploads = 0
-    failed_uploads = 0
+    """Upload tile chunks to datastore with error handling."""
+    total_chunks = len(chunks)
+    total_tiles = sum(chunk["chunk_info"]["tile_count"] for chunk in chunks)
+    successful_chunks = 0
+    failed_chunks = 0
+    successful_tiles = 0
 
     logging.info(
-        f"Starting upload of {total_tiles} tiles from table '{table_name}' to datastore '{datastore_name}'"
+        f"Starting upload of {total_tiles} tiles in {total_chunks} chunks from table '{table_name}' to datastore '{datastore_name}'"
     )
 
-    for i in range(0, total_tiles, batch_size):
-        batch = tiles[i : i + batch_size]
-        batch_start = i + 1
-        batch_end = min(i + batch_size, total_tiles)
+    for i, chunk_data in enumerate(chunks):
+        chunk_id = chunk_data["chunk_info"]["chunk_id"]
+        tile_count = chunk_data["chunk_info"]["tile_count"]
 
-        logging.info(f"Processing batch {batch_start}-{batch_end} of {total_tiles}")
+        try:
+            # Create chunk key
+            entry_key = create_chunk_key(chunk_id)
 
-        for x, y, z, value in batch:
-            try:
-                # Create a unique key for this tile
-                entry_key = create_tile_key(x, y, z)
+            # Validate key length (must be under 50 characters)
+            if len(entry_key) >= 50:
+                raise ValueError(f"Chunk key '{entry_key}' exceeds 50 character limit")
 
-                # Prepare the data to store
-                tile_data = {
-                    "x": x,
-                    "y": y,
-                    "z": z,
-                    "value": value,
-                    "table": table_name,
-                    "uploaded_at": str(int(time.time())),
-                }
-
-                # Upload to datastore
-                result = client.SetDatastoreEntry(
-                    datastore_name=datastore_name,
-                    entry_key=entry_key,
-                    data=tile_data,
-                    scope="global",
+            # Validate data size
+            chunk_size = calculate_json_size(chunk_data)
+            if chunk_size >= 4_194_304:
+                raise ValueError(
+                    f"Chunk {chunk_id} data size ({chunk_size}) exceeds 4MB limit"
                 )
 
-                successful_uploads += 1
-                logging.debug(
-                    f"Successfully uploaded tile ({x}, {y}, {z}) from {table_name}"
-                )
-
-            except Exception as e:
-                failed_uploads += 1
-                logging.error(
-                    f"Failed to upload tile ({x}, {y}, {z}) from {table_name}: {str(e)}"
-                )
-
-        # Small delay between batches to avoid rate limiting
-        if i + batch_size < total_tiles:
-            logging.info(
-                f"Completed batch {batch_start}-{batch_end}. Waiting 1 second before next batch..."
+            # Upload chunk to datastore
+            result = client.SetDatastoreEntry(
+                datastore_name=datastore_name,
+                entry_key=entry_key,
+                data=chunk_data,
+                scope="global",
             )
-            time.sleep(1)
+
+            successful_chunks += 1
+            successful_tiles += tile_count
+
+            logging.info(
+                f"Successfully uploaded chunk {chunk_id} with {tile_count} tiles ({chunk_size:,} characters) [{i+1}/{total_chunks}]"
+            )
+
+        except Exception as e:
+            failed_chunks += 1
+            logging.error(
+                f"Failed to upload chunk {chunk_id} with {tile_count} tiles: {str(e)}"
+            )
+
+        # Delay between chunks to avoid rate limiting
+        if i + 1 < total_chunks:
+            logging.debug(
+                f"Waiting {delay_between_chunks} seconds before next chunk..."
+            )
+            time.sleep(delay_between_chunks)
 
     logging.info(
-        f"Upload complete for table '{table_name}': {successful_uploads} successful, {failed_uploads} failed"
+        f"Upload complete for table '{table_name}': {successful_chunks}/{total_chunks} chunks successful, {successful_tiles}/{total_tiles} tiles uploaded"
     )
 
 
@@ -154,9 +254,10 @@ def upload_table_to_datastore(
     db_path: str,
     table_type: TableType,
     datastore_name: str,
-    batch_size: int,
+    max_chunk_size: int,
+    delay_between_chunks: float = 1.0,
 ) -> None:
-    """Upload a specific table's contents to datastore."""
+    """Upload a specific table's contents to datastore as optimized chunks."""
     try:
         # Get all tiles from the table
         tiles = GetAllTilesFromTable(db_path, table_type)
@@ -165,8 +266,23 @@ def upload_table_to_datastore(
             logging.warning(f"No tiles found in table '{table_type.value}'")
             return
 
-        # Upload tiles in batches
-        batch_upload_tiles(client, datastore_name, table_type.value, tiles, batch_size)
+        logging.info(
+            f"Creating optimized chunks for {len(tiles)} tiles from table '{table_type.value}'"
+        )
+
+        # Create tile chunks that fit within datastore limits
+        chunks = create_tile_chunks(tiles, table_type.value, max_chunk_size)
+
+        if not chunks:
+            logging.warning(f"No chunks created for table '{table_type.value}'")
+            return
+
+        logging.info(f"Created {len(chunks)} chunks for table '{table_type.value}'")
+
+        # Upload chunks to datastore
+        batch_upload_chunks(
+            client, datastore_name, table_type.value, chunks, delay_between_chunks
+        )
 
     except Exception as e:
         logging.error(f"Error uploading table '{table_type.value}': {str(e)}")
@@ -182,7 +298,8 @@ def main():
 Examples:
   %(prog)s tiles.db --universe-id 123456789
   %(prog)s tiles.db --universe-id 123456789 --datastore-prefix MyProject_ --tables IMG_ASSET_IDS MESH_ASSET_IDS
-  %(prog)s tiles.db --universe-id 123456789 --datastore-prefix Game_ --datastore-suffix _Data --batch-size 50 --dry-run
+  %(prog)s tiles.db --universe-id 123456789 --datastore-prefix Game_ --datastore-suffix _Data --max-chunk-size 3000000 --dry-run
+  %(prog)s tiles.db --universe-id 123456789 --chunk-delay 0.5 --max-chunk-size 2000000
         """,
     )
 
@@ -212,10 +329,17 @@ Examples:
     )
 
     parser.add_argument(
-        "--batch-size",
+        "--max-chunk-size",
         type=int,
-        default=100,
-        help="Number of tiles to upload per batch (default: 100)",
+        default=4_000_000,
+        help="Maximum size in characters for each chunk (default: 4MB with buffer)",
+    )
+
+    parser.add_argument(
+        "--chunk-delay",
+        type=float,
+        default=1.0,
+        help="Delay in seconds between chunk uploads (default: 1.0)",
     )
 
     parser.add_argument(
@@ -326,7 +450,12 @@ Examples:
                 f"Starting upload for table '{table_type.value}' to datastore '{datastore_name}'"
             )
             upload_table_to_datastore(
-                client, args.db_path, table_type, datastore_name, args.batch_size
+                client,
+                args.db_path,
+                table_type,
+                datastore_name,
+                args.max_chunk_size,
+                args.chunk_delay,
             )
             logging.info(
                 f"Completed upload for table '{table_type.value}' to datastore '{datastore_name}'"
