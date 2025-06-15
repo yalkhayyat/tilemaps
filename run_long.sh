@@ -1,3 +1,5 @@
+#!/bin/bash
+
 docker run \
   --rm \
   -d \
@@ -5,4 +7,5 @@ docker run \
   --env-file ./.env \
   -v "$(pwd)/src:/app/src" \
   -v "$(pwd)/output:/app/output" \
-  tilemaps-generator
+  tilemaps-generator \
+  "$@"
