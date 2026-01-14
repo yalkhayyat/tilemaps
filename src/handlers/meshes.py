@@ -129,10 +129,15 @@ def GetHeightmappedMesh(x, y, z, heightmap_path, output_path, spherical):
             scale_factor = 40075000 / (2**z)
             verts[valid_mask, 2] = sampled_heights[valid_mask] / scale_factor
 
-        # 4. Write modified coordinates back to Blender
-        mesh.vertices.foreach_set("co", verts.ravel())
+        # Write modified coordinates back to Blender
+        mesh.vertices.foreach_set("co", verts.astype(np.float32).ravel())
         mesh.update()
-        
+    
+    # Force Blender to recognize the vertex changes by toggling edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Set origin to geometry center
     bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
 
     SaveTileToSQLite(

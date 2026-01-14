@@ -239,7 +239,7 @@ def main(args):
         TableType.MESH_ASSET_IDS,
         TableType.MESH_OPERATIONS,
         TableType.MISSED_MESH,
-        UploadFlatTileMesh,
+        UploadTileMesh,
     )
 
     stats = {"img": {"processed": 0, "skipped": 0}, "mesh": {"processed": 0, "skipped": 0}}
