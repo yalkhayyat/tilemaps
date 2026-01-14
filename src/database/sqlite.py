@@ -1,8 +1,8 @@
 import sqlite3
 from enum import Enum
+from strenum import StrEnum
 
-
-class TableType(Enum):
+class TableType(StrEnum):
     """Enum for different table types in the unified database."""
 
     IMG_ASSET_IDS = "img_asset_ids"
@@ -22,7 +22,7 @@ def _get_connection(db_path):
     cursor = conn.cursor()
 
     for table_type in TableType:
-        table_name = table_type.value
+        table_name = table_type
         cursor.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
@@ -41,27 +41,9 @@ def _get_connection(db_path):
 
 def SaveTileToSQLite(x, y, z, value, db_path, table_type=None):
     """Save a tile value to the specified table in the database."""
-    # For backward compatibility, if no table_type specified, use the old behavior
-    if table_type is None:
-        # This is for the old mesh_vert_offsets functionality
-        table_name = "tiles"
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS tiles (
-                x INTEGER,
-                y INTEGER,
-                z INTEGER,
-                value TEXT,
-                PRIMARY KEY (x, y, z)
-            )
-        """
-        )
-    else:
-        conn = _get_connection(db_path)
-        cursor = conn.cursor()
-        table_name = table_type.value
+    conn = _get_connection(db_path)
+    cursor = conn.cursor()
+    table_name = table_type
 
     cursor.execute(
         f"""
@@ -78,14 +60,8 @@ def SaveTileToSQLite(x, y, z, value, db_path, table_type=None):
 
 def LoadTileValueFromSQLite(x, y, z, db_path, table_type=None):
     """Load a tile value from the specified table in the database."""
-    # For backward compatibility, if no table_type specified, use the old behavior
-    if table_type is None:
-        # This is for the old mesh_vert_offsets functionality
-        table_name = "tiles"
-        conn = sqlite3.connect(db_path)
-    else:
-        conn = _get_connection(db_path)
-        table_name = table_type.value
+    conn = _get_connection(db_path)
+    table_name = table_type
 
     cursor = conn.cursor()
 
@@ -110,7 +86,7 @@ def GetAllTilesFromTable(db_path, table_type):
 
     cursor.execute(
         f"""
-        SELECT x, y, z, value FROM {table_type.value}
+        SELECT x, y, z, value FROM {table_type}
     """
     )
 
@@ -127,7 +103,7 @@ def DeleteTileFromSQLite(x, y, z, db_path, table_type):
 
     cursor.execute(
         f"""
-        DELETE FROM {table_type.value}
+        DELETE FROM {table_type}
         WHERE x = ? AND y = ? AND z = ?
     """,
         (x, y, z),
@@ -144,7 +120,7 @@ def TableHasTile(x, y, z, db_path, table_type):
 
     cursor.execute(
         f"""
-        SELECT 1 FROM {table_type.value}
+        SELECT 1 FROM {table_type}
         WHERE x = ? AND y = ? AND z = ?
         LIMIT 1
     """,
@@ -162,7 +138,7 @@ def GetTableTileCount(db_path, table_type):
     conn = _get_connection(db_path)
     cursor = conn.cursor()
 
-    cursor.execute(f"SELECT COUNT(*) FROM {table_type.value}")
+    cursor.execute(f"SELECT COUNT(*) FROM {table_type}")
 
     count = cursor.fetchone()[0]
     conn.close()

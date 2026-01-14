@@ -1,11 +1,13 @@
 import dotenv, os, logging, random
-from logging_format import TerminalFormatter, FileFormatter
+from src.utils.logger import TerminalFormatter, FileFormatter
 from logging.handlers import RotatingFileHandler 
-from rbx_open_cloud import OpenCloudClient
-from mapbox import MapboxClient
+from src.libs.rbx_open_cloud import OpenCloudClient
+from src.libs.mapbox import MapboxClient
+from src.libs.eox import EOXClient
+from src.libs.aws_terrain import AWSTerrainClient
 import airportsdata
 from datetime import datetime
-from tile_quadtree import Tile
+from src.libs.quadtree import Tile
 
 # Environment variables
 
@@ -25,15 +27,6 @@ SAVED_MESH_PATH = os.path.join("output", ID, "mesh.fbx")
 # Unified database path
 UNIFIED_DB_PATH = os.path.join("output", ID, "tiles.db")
 
-# Legacy paths for backward compatibility (now using single database)
-IMG_ASSET_ID_PATH = UNIFIED_DB_PATH
-MESH_ASSET_ID_PATH = UNIFIED_DB_PATH
-IMG_OPERATIONS_PATH = UNIFIED_DB_PATH
-MESH_OPERATIONS_PATH = UNIFIED_DB_PATH
-MISSED_IMG_PATH = UNIFIED_DB_PATH
-MISSED_MESH_PATH = UNIFIED_DB_PATH
-MESH_VERT_OFFSET_PATH = UNIFIED_DB_PATH
-
 LOGS_PATH = os.path.join("output", ID, "logs.txt")
 
 BLENDER_PATH = "blender"
@@ -44,7 +37,36 @@ TILE_VERTEX_LENGTH = 32
 os.makedirs(f"output/{ID}")
 
 ROBLOX = OpenCloudClient(ROBLOX_API_KEY, ROBLOX_USER_ID, 15)
-MAPBOX = MapboxClient(MAPBOX_API_KEY, 15)
+
+# Separate clients for imagery and terrain
+IMAGERY_CLIENT = EOXClient(max_retries=15)
+TERRAIN_CLIENT = AWSTerrainClient(max_retries=15)
+# TERRAIN_CLIENT = MapboxClient(MAPBOX_API_KEY, max_retries=15)
+
+# Terrain height encoding configuration
+
+# AWS Terrarium
+TERRAIN_ENCODING = {
+    "coefficients": [256.0, 1.0, 1.0 / 256.0],
+    "offset": -32768.0,
+    "multiplier": 1.0,
+}
+TERRAIN_TILE_CONFIG = {
+    "tileset_id": None,  # AWS doesn't use tileset IDs
+    "file_format": ".png",
+}
+
+# Mapbox
+# TERRAIN_ENCODING = {
+#     "coefficients": [65536.0, 256.0, 1.0],
+#     "offset": -10000.0,
+#     "multiplier": 0.1,
+# }
+# TERRAIN_TILE_CONFIG = {
+#     "tileset_id": "mapbox.mapbox-terrain-dem-v1",
+#     "file_format": ".pngraw",
+# }
+
 AIRPORTS = airportsdata.load()
 
 
@@ -71,18 +93,18 @@ logger.addHandler(fh)
 
 # Map Generation Settings
 
-QUADTREE_ROOT = Tile(0, 0, 0)
-QUADTREE_MAX_LOD = 12
-QUADTREE_LOD_THRESHOLD = 11
+QUADTREE_ROOT = Tile(1543, 3212, 13)
+QUADTREE_MAX_LOD = 13
+QUADTREE_LOD_THRESHOLD = 13
 QUADTREE_AIRPORTS = [
-    "KATL",  # Atlanta
-    "KLAX",  # Los Angeles
-    "KORD",  # Chicago
-    "KDFW",  # Dallas Fort Worth
-    "KDEN",  # Denver
-    "KJFK",  # John F. Kennedy (New York City)
-    "KSFO",  # San Francisco
-    "KSEA",  # Seattle-Tacoma
-    "KLAS",  # Harry Reid (Las Vegas)
-    "KMIA",  # Miami
+    # "KATL",  # Atlanta
+    # "KLAX",  # Los Angeles
+    # "KORD",  # Chicago
+    # "KDFW",  # Dallas Fort Worth
+    # "KDEN",  # Denver
+    # "KJFK",  # John F. Kennedy (New York City)
+    # "KSFO",  # San Francisco
+    # "KSEA",  # Seattle-Tacoma
+    # "KLAS",  # Harry Reid (Las Vegas)
+    # "KMIA",  # Miami
 ]

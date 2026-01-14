@@ -1,6 +1,6 @@
 import logging
-from config import *
-from sqlite import (
+from src.config import *
+from src.database.sqlite import (
     SaveTileToSQLite,
     LoadTileValueFromSQLite,
     GetAllTilesFromTable,

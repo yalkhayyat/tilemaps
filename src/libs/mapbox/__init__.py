@@ -1,4 +1,4 @@
-from mapbox.mapbox_constants import *
+from .mapbox_constants import *
 import requests
 from PIL import Image
 from io import BytesIO

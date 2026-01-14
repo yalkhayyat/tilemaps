@@ -1,6 +1,3 @@
-from enum import StrEnum
-
-
 class MapboxAPI:
     RASTER_API = "https://api.mapbox.com/v4/{}/{}/{}/{}@2x{}?access_token={}"
 

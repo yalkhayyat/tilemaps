@@ -1,5 +1,5 @@
 import requests
-from rbx_open_cloud.open_cloud_constants import *
+from .open_cloud_constants import *
 import json
 import time
 import logging
@@ -34,8 +34,8 @@ class OpenCloudClient:
     def CreateAsset(
         self,
         file_path: str,
-        asset_type: AssetType,
-        content_type: ContentType,
+        asset_type: str,
+        content_type: str,
         display_name: str,
         description: str = "",
     ) -> str | None:

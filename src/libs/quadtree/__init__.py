@@ -33,25 +33,34 @@ class Tile:
 
 
 class QuadTree:
-    def __init__(self, root: Tile, max_lod, lod_subdivide_threshold) -> None:
+    def __init__(self, root: Tile, max_lod, lod_subdivide_threshold, disable_lod=False) -> None:
         self.root = root
         self.max_lod = max_lod
         self.lod_subdivide_threshold = lod_subdivide_threshold
+        self.disable_lod = disable_lod
         self.gps_points: list[GpsPoint] = []
 
     def AddPoint(self, lat, lon):
         self.gps_points.append(GpsPoint(lat, lon))
 
     def __subdivide(self, tile: Tile):
-        for point in self.gps_points:
-            point_tile_x, point_tile_y = deg2num(
-                point.latitude, point.longitude, tile.zoom
-            )
+        # If LOD is disabled, always subdivide (up to max_lod, handled in recursion)
+        should_subdivide = self.disable_lod
 
-            if (
-                abs(point_tile_x - tile.x) <= 1 and abs(point_tile_y - tile.y) <= 1
-            ) or tile.zoom >= self.lod_subdivide_threshold:
-                # Subdivide
+        if not should_subdivide:
+            for point in self.gps_points:
+                point_tile_x, point_tile_y = deg2num(
+                    point.latitude, point.longitude, tile.zoom
+                )
+
+                if (
+                    abs(point_tile_x - tile.x) <= 1 and abs(point_tile_y - tile.y) <= 1
+                ) or tile.zoom >= self.lod_subdivide_threshold:
+                    should_subdivide = True
+                    break
+        
+        if should_subdivide:
+            # Subdivide
                 top_left = Tile(tile.x * 2, tile.y * 2, tile.zoom + 1)
                 top_right = Tile(tile.x * 2 + 1, tile.y * 2, tile.zoom + 1)
                 bottom_left = Tile(tile.x * 2, tile.y * 2 + 1, tile.zoom + 1)

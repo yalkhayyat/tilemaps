@@ -1,5 +1,5 @@
-from enum import StrEnum, IntEnum
-
+from enum import IntEnum
+from strenum import StrEnum
 
 class ContentType(StrEnum):
     MP3 = "audio/mpeg"

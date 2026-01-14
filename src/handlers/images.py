@@ -1,5 +1,8 @@
-import numpy as np
+from src.config import *
 from PIL import Image
+import numpy as np
+from src.libs.rbx_open_cloud import AssetType, ContentType
+from src.libs.mapbox import *
 
 
 def extend_image_edges(image_path, padding):
@@ -35,3 +38,16 @@ def extend_image_edges(image_path, padding):
     # Convert the result back to an image and save it
     new_img = Image.fromarray(new_img_array)
     new_img.save(image_path)
+
+
+def UploadTileImg(x, y, z):
+    IMAGERY_CLIENT.GetImageTile(MapboxAPI.Tilesets.SATELLITE, x, y, z, ".jpg", SAVED_IMG_PATH)
+    extend_image_edges(SAVED_IMG_PATH, 16)
+    op_id = ROBLOX.CreateAsset(
+        SAVED_IMG_PATH,
+        AssetType.IMAGE,
+        ContentType.JPEG,
+        display_name=f"TILE_{x}_{y}_{z}",
+    )
+
+    return op_id
