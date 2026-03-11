@@ -30,7 +30,7 @@ UNIFIED_DB_PATH = os.path.join("output", ID, "tiles.db")
 LOGS_PATH = os.path.join("output", ID, "logs.txt")
 
 BLENDER_PATH = "blender"
-BLENDER_TILE_PATH = os.path.join("assets", "mesh_tile.blend")
+BLENDER_TILE_PATH = os.path.join("assets", "mesh_tile_eox_padding_fix.blend")
 
 TILE_VERTEX_LENGTH = 32
 
@@ -39,8 +39,8 @@ os.makedirs(f"output/{ID}")
 ROBLOX = OpenCloudClient(ROBLOX_API_KEY, ROBLOX_USER_ID, 15)
 
 # Separate clients for imagery and terrain
-IMAGERY_CLIENT = EOXClient(max_retries=15)
-TERRAIN_CLIENT = AWSTerrainClient(max_retries=15)
+IMAGERY_CLIENT = EOXClient(max_retries=5)
+TERRAIN_CLIENT = AWSTerrainClient(max_retries=5)
 # TERRAIN_CLIENT = MapboxClient(MAPBOX_API_KEY, max_retries=15)
 
 # Terrain height encoding configuration
@@ -93,10 +93,16 @@ logger.addHandler(fh)
 
 # Map Generation Settings
 
-QUADTREE_ROOT = Tile(1543, 3212, 13)
-QUADTREE_MAX_LOD = 13
-QUADTREE_LOD_THRESHOLD = 13
+QUADTREE_ROOTS = [
+    Tile(7, 4, 4),
+    Tile(8, 4, 4),
+    Tile(7, 5, 4),
+    Tile(8, 5, 4),
+]
+QUADTREE_MAX_LOD = 15
+QUADTREE_LOD_THRESHOLD = 14
 QUADTREE_AIRPORTS = [
+    # USA
     # "KATL",  # Atlanta
     # "KLAX",  # Los Angeles
     # "KORD",  # Chicago
@@ -107,4 +113,33 @@ QUADTREE_AIRPORTS = [
     # "KSEA",  # Seattle-Tacoma
     # "KLAS",  # Harry Reid (Las Vegas)
     # "KMIA",  # Miami
+    
+    # Western Europe
+    "EGLL", # London Heathrow
+    "EGKK", # London Gatwick
+    "EGSS", # London Stansted
+    "EGGW", # London Luton
+    "EHAM", # Amsterdam Schiphol
+    "LFPG", # Paris Charles de Gaulle
+    "LFPO", # Paris Orly
+    "EDDF", # Frankfurt
+    "EBBR", # Brussels
+    "EDDL", # Dusseldorf
+    "EIDW", # Dublin
+    "EGCC", # Manchester
+    "EGPH", # Edinburgh
+    "EGPF", # Glasgow
+    "LSZH", # Zurich
+    "LSGG", # Geneva
+    "LFLL", # Lyon
+    "LFMN", # Nice
+    "LFML", # Marseille
+    "LFBD", # Bordeaux
+    "LFBO", # Toulouse
+    "LEBL", # Barcelona
+    "LEBB", # Bilbao
+    "LECO", # A Coruna
+    "EDDK", # Cologne Bonn
+    "EDDS", # Stuttgart
+    "EDDH"  # Hamburg
 ]

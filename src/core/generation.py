@@ -214,10 +214,17 @@ def process_asset_type_flow(quadtree, handler, db_path, asset_label, process_all
 
 
 def main(args):
-    quadtree = QuadTree(QUADTREE_ROOT, QUADTREE_MAX_LOD, QUADTREE_LOD_THRESHOLD, disable_lod=args.disable_lod)
-    for airport in QUADTREE_AIRPORTS:
-        quadtree.AddPoint(AIRPORTS[airport]["lat"], AIRPORTS[airport]["lon"])
-    quadtree.BuildTree()
+    # Build quadtrees for all root tiles
+    quadtrees = []
+    for root_tile in QUADTREE_ROOTS:
+        logging.info(f"Building quadtree for root tile ({root_tile.x}, {root_tile.y}, {root_tile.zoom})")
+        quadtree = QuadTree(root_tile, QUADTREE_MAX_LOD, QUADTREE_LOD_THRESHOLD, disable_lod=args.disable_lod)
+        for airport in QUADTREE_AIRPORTS:
+            quadtree.AddPoint(AIRPORTS[airport]["lat"], AIRPORTS[airport]["lon"])
+        quadtree.BuildTree()
+        quadtrees.append(quadtree)
+    
+    logging.info(f"Built {len(quadtrees)} quadtree(s)")
 
     # Check existing DB
     existing_db_path = args.existing_db if hasattr(args, "existing_db") and args.existing_db and os.path.exists(args.existing_db) else None
@@ -226,7 +233,7 @@ def main(args):
     elif existing_db_path:
         logging.info(f"Using existing database for tile checking: {existing_db_path}")
 
-    # Initialize handlers
+    # Initialize handlers (shared across all quadtrees)
     img_handler = AssetHandler(
         UNIFIED_DB_PATH,
         TableType.IMG_ASSET_IDS,
@@ -239,17 +246,27 @@ def main(args):
         TableType.MESH_ASSET_IDS,
         TableType.MESH_OPERATIONS,
         TableType.MISSED_MESH,
-        UploadTileMesh,
+        UploadFlatTileMesh,
     )
 
     stats = {"img": {"processed": 0, "skipped": 0}, "mesh": {"processed": 0, "skipped": 0}}
     
     # Process assets based on arguments
     if args.asset in ["all", "img"]:
-        stats["img"] = process_asset_type_flow(quadtree, img_handler, existing_db_path, "img", args.process_all_nodes)
+        for i, quadtree in enumerate(quadtrees):
+            root = quadtree.root
+            logging.info(f"Processing img for root {i+1}/{len(quadtrees)} ({root.x}, {root.y}, {root.zoom})")
+            root_stats = process_asset_type_flow(quadtree, img_handler, existing_db_path, "img", args.process_all_nodes)
+            stats["img"]["processed"] += root_stats["processed"]
+            stats["img"]["skipped"] += root_stats["skipped"]
         
     if args.asset in ["all", "mesh"]:
-        stats["mesh"] = process_asset_type_flow(quadtree, mesh_handler, existing_db_path, "mesh", args.process_all_nodes)
+        for i, quadtree in enumerate(quadtrees):
+            root = quadtree.root
+            logging.info(f"Processing mesh for root {i+1}/{len(quadtrees)} ({root.x}, {root.y}, {root.zoom})")
+            root_stats = process_asset_type_flow(quadtree, mesh_handler, existing_db_path, "mesh", args.process_all_nodes)
+            stats["mesh"]["processed"] += root_stats["processed"]
+            stats["mesh"]["skipped"] += root_stats["skipped"]
 
     # Log overall statistics
     if args.asset == "all":
